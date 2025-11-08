@@ -1,32 +1,38 @@
 # 🧩 Backend Assessment - Flask (Sunil)
 
-This is a backend-only Flask application built as part of a full-stack assessment.  
+This project is a **backend-only Flask application** developed as part of a technical assessment.  
 It receives payment webhooks, processes them in the background (simulating a 30-second delay),  
 and provides endpoints to check transaction statuses.
 
 ---
 
 ## 🚀 Features
-- `POST /v1/webhooks/transactions` — Accepts webhook JSON, responds **202 Accepted** immediately.  
-- `GET /` — Health check with current UTC time.  
-- `GET /v1/transactions/<transaction_id>` — Retrieve transaction status.  
-- Uses **SQLite** (local file `db.sqlite`) for persistent storage.  
-- Implements **background processing** via daemon threads (30s simulated delay).  
-- Ensures **idempotency** — duplicate transaction IDs are ignored gracefully.
+
+✅ `POST /v1/webhooks/transactions` — Accepts webhook JSON, responds **202 Accepted** immediately.  
+✅ `GET /` — Health check with current UTC time.  
+✅ `GET /v1/transactions/<transaction_id>` — Retrieve transaction status.  
+✅ Uses **SQLite** (`db.sqlite`) for data persistence with SQLAlchemy ORM.  
+✅ Implements background processing via **threads (30s delay)**.  
+✅ Enforces **idempotency** — duplicate transaction IDs are ignored gracefully.  
 
 ---
 
 ## ⚙️ Tech Stack
-- **Flask** — lightweight Python web framework  
-- **Flask-SQLAlchemy** — ORM for database management  
-- **SQLite** — default local storage (no setup needed)  
-- **Gunicorn** — production-ready WSGI server (for Render deployment)
+
+| Component | Technology |
+|------------|-------------|
+| Backend Framework | Flask |
+| ORM | Flask-SQLAlchemy |
+| Database | SQLite (default) |
+| Server | Gunicorn (for Render deployment) |
+| Language | Python 3 |
 
 ---
 
-## 🧰 How to Run Locally
+## 🧰 Setup Instructions
 
-### 1️⃣ Clone the repo and create a virtual environment
+### 🧩 1️⃣ Create a Virtual Environment and Install Dependencies
+
 ```bash
 python -m venv venv
 venv\Scripts\activate   # For Windows
@@ -34,23 +40,21 @@ venv\Scripts\activate   # For Windows
 source venv/bin/activate   # For macOS/Linux
 
 pip install -r requirements.txt
-2️⃣ Start the Flask app
+🚀 2️⃣ Run the Flask Application
 bash
 Copy code
 flask run
-or
-
-bash
-Copy code
+# OR
 python app.py
-By default, the app runs at:
+By default, the app will start at:
 
 cpp
 Copy code
 http://127.0.0.1:5000/
-🧪 Postman API Documentation
+🧪 API Documentation (Postman Friendly)
 🩺 1. Health Check
 Method: GET
+Endpoint: /
 URL: http://127.0.0.1:5000/
 
 Response:
@@ -63,13 +67,15 @@ Copy code
 }
 💳 2. Receive Webhook
 Method: POST
+Endpoint: /v1/webhooks/transactions
 URL: http://127.0.0.1:5000/v1/webhooks/transactions
+
 Headers:
 
 pgsql
 Copy code
 Content-Type: application/json
-Body (JSON):
+Request Body:
 
 json
 Copy code
@@ -87,24 +93,23 @@ Copy code
 {
   "message": "Webhook received"
 }
-✅ Behavior:
+Behavior:
 
-Returns 202 Accepted instantly.
+Responds instantly with 202 Accepted.
 
-Stores transaction in DB (status = PROCESSING).
+Saves transaction in the database (status = PROCESSING).
 
-Starts background thread (30s delay).
+Starts background thread that marks it as PROCESSED after 30 seconds.
 
 🔍 3. Get Transaction Status
 Method: GET
-URL: http://127.0.0.1:5000/v1/transactions/<transaction_id>
-
-Example:
+Endpoint: /v1/transactions/<transaction_id>
+Example URL:
 
 bash
 Copy code
 http://127.0.0.1:5000/v1/transactions/txn_demo_1
-Response (immediately after webhook):
+Response (Immediately after POST):
 
 json
 Copy code
@@ -118,7 +123,7 @@ Copy code
   "created_at": "2025-11-08T14:31:00Z",
   "processed_at": null
 }
-Response (after 30 seconds):
+Response (After 30 seconds):
 
 json
 Copy code
@@ -132,17 +137,14 @@ Copy code
   "created_at": "2025-11-08T14:31:00Z",
   "processed_at": "2025-11-08T14:31:30Z"
 }
-✅ Behavior:
+Behavior:
 
-Initially returns “PROCESSING”
+PROCESSING → PROCESSED transition after background task completes.
 
-After 30s background thread updates to “PROCESSED”
-
-🔁 4. Duplicate Webhook (Idempotency)
+🔁 4. Duplicate Webhook (Idempotency Check)
 Method: POST
-URL: http://127.0.0.1:5000/v1/webhooks/transactions
-
-Body (same transaction again):
+Endpoint: /v1/webhooks/transactions
+Request Body (same transaction again):
 
 json
 Copy code
@@ -160,14 +162,14 @@ Copy code
 {
   "message": "Webhook received"
 }
-✅ Behavior:
+Behavior:
 
-Returns 202 again (gracefully accepted)
+Returns 202 again.
 
-No duplicate transaction is created in the database
+No duplicate row is created in the database.
 
 ❌ 5. Invalid Webhook Request
-Body (missing required fields):
+Request Body (missing fields):
 
 json
 Copy code
@@ -184,68 +186,72 @@ Copy code
 Status: 400 Bad Request
 
 🧩 Database (SQLite)
-The app automatically creates db.sqlite in the project folder.
-You can inspect it using DB Browser for SQLite → Table: transactions.
+The database is automatically created as db.sqlite when the app starts.
 
-Column	Description
-id	Auto primary key
-transaction_id	Unique transaction reference
-source_account	User account
-destination_account	Merchant account
-amount	Transaction amount
-currency	e.g., INR
-status	PROCESSING / PROCESSED
-created_at	Timestamp of webhook
-processed_at	Timestamp after background job
+🗃️ Table: transactions
+Column	Type	Description
+id	Integer (PK)	Auto-increment primary key
+transaction_id	String	Unique transaction reference
+source_account	String	Account sending the money
+destination_account	String	Account receiving the money
+amount	Float	Transaction amount
+currency	String	Transaction currency (e.g., INR)
+status	String	PROCESSING / PROCESSED
+created_at	DateTime	Time when webhook was received
+processed_at	DateTime	Time when background task finished
+
+You can open this file using DB Browser for SQLite to verify records.
 
 ☁️ Deployment (Render)
-Steps:
-Push your project to a public GitHub repo
+🌍 Steps to Deploy
+Push your project to a public GitHub repository
 
 Go to https://render.com
 
 Click New → Web Service
 
-Connect your GitHub repo
+Connect your GitHub repository
 
-Configure:
+Set configurations:
 
-Build Command: pip install -r requirements.txt
+Setting	Value
+Build Command	pip install -r requirements.txt
+Start Command	gunicorn app:app
+Environment	Python 3
+Region	Singapore (closest to India)
 
-Start Command: gunicorn app:app
+Click Deploy 🚀
 
-Deploy 🚀
+Wait for Render to build and deploy your service.
 
-Your live API will look like:
+Once deployed, you’ll get a live URL like:
 
 arduino
 Copy code
 https://backend-assessment-flask.onrender.com/
-Examples:
+🌐 Live API Examples
+Action	Method	Example URL
+Health Check	GET	https://backend-assessment-flask.onrender.com/
+Send Webhook	POST	https://backend-assessment-flask.onrender.com/v1/webhooks/transactions
+Get Transaction	GET	https://backend-assessment-flask.onrender.com/v1/transactions/txn_demo_1
 
-bash
-Copy code
-GET https://backend-assessment-flask.onrender.com/
-POST https://backend-assessment-flask.onrender.com/v1/webhooks/transactions
-GET https://backend-assessment-flask.onrender.com/v1/transactions/txn_demo_1
 🧠 Design Choices
-Flask for simplicity and speed
+Flask for simplicity and rapid development
 
-SQLite for easy local persistence
+SQLite for easy persistence (swappable with PostgreSQL for production)
 
-SQLAlchemy ORM for clean DB interaction
+SQLAlchemy for clean database ORM handling
 
-Threads to simulate async background processing (30s delay)
+Threads simulate asynchronous background processing
 
-Unique transaction_id ensures idempotency
+Unique constraint on transaction_id enforces idempotency
 
 📦 Deliverables
-✅ Public GitHub Repository Link
-
-✅ Live Deployed Link (Render)
+Deliverable	Description
+🗂️ GitHub Repo Link	Public repository containing this project
+🌍 Deployed Link	Live API hosted on Render
 
 👨‍💻 Author
 Name: Sunil
 Role: Full Stack Python Developer
-Tech Stack: Python | Flask | SQLAlchemy | React Js | AWS | Django
-
+Tech Stack: Python | Flask | SQLAlchemy | React.js | AWS | Django
