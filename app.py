@@ -87,6 +87,25 @@ def get_transaction(transaction_id):
         "processed_at": txn.processed_at.isoformat() if txn.processed_at else None
     }), 200
 
+#-----------------To Get All Transactions-------------------
+
+@app.route("/v1/transactions", methods=["GET"])
+def get_all_transactions():
+    txns = Transaction.query.all()
+    return jsonify([
+        {
+            "transaction_id": t.transaction_id,
+            "source_account": t.source_account,
+            "destination_account": t.destination_account,
+            "amount": t.amount,
+            "currency": t.currency,
+            "status": t.status,
+            "created_at": t.created_at.isoformat(),
+            "processed_at": t.processed_at.isoformat() if t.processed_at else None
+        } for t in txns
+    ]), 200
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
