@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from flask import Flask, request, jsonify, abort
 from sqlalchemy.exc import IntegrityError
 from db import db, init_db
@@ -15,12 +15,22 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 init_db(app)
 
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
 # ---------------- Health Check ----------------
 @app.route("/", methods=["GET"])
 def health():
+    now_utc = datetime.now(timezone.utc)
+    now_ist = now_utc.astimezone(IST)
+
+    # Format example: Saturday, 08 November 2025, 09:31 PM (IST)
+    pretty_time = now_ist.strftime("%A, %d %B %Y, %I:%M %p (IST)")
+
     return jsonify({
         "status": "HEALTHY",
-        "current_time": datetime.now(timezone.utc).isoformat()
+        "utc_time": now_utc.strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "current_time": pretty_time
     }), 200
 
 
